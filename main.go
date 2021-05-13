@@ -15,12 +15,19 @@ var (
 )
 
 func main() {
+	configFilePtr := flag.String("c", "", "The configuration file to use")
 	certDirPtr := flag.String("d", "", "The folder which contains the certificate requirements (relative or absolute)")
 	flag.Parse()
+
+	if *configFilePtr != "" {
+		setConfigurationFile(*configFilePtr)
+	}
 
 	if *certDirPtr != "" {
 		certDir = *certDirPtr
 	}
+
+	// TODO create config file if it doesnt exist
 
 	log.Println("Starting up...")
 

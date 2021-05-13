@@ -1,0 +1,3 @@
+simplecs:
+    host: 'http://somedomain.com:8880'
+    apikey: abc123

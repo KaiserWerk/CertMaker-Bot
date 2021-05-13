@@ -23,7 +23,7 @@ func requestIfNecessary(file string) error {
 		return err
 	}
 
-	var cr certificateReqirement
+	var cr certificateRequirement
 	err = json.Unmarshal(fileCont, &cr)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func requestIfNecessary(file string) error {
 	return nil
 }
 
-func requestNewKeyAndCert(cr certificateReqirement) error {
+func requestNewKeyAndCert(cr certificateRequirement) error {
 	jsonCont, err := json.Marshal(cr)
 	if err != nil {
 		return err

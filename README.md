@@ -1,1 +1,1 @@
-"# SimpleCA Bot" 
+# SimpleCA Bot

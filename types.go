@@ -1,6 +1,13 @@
 package main
 
-type certificateReqirement struct {
+type configuration struct {
+	SimpleCA struct{
+		Host string `json:"host"`
+		ApiKey string `json:"apikey"`
+	} `json:"simpleca"`
+}
+
+type certificateRequirement struct {
 	Domains []string `json:"domains"`
 	IPs     []string `json:"ips"`
 	Subject struct {
