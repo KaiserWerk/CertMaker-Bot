@@ -81,8 +81,7 @@ func main() {
 				if cr.PostCommands != nil && len(cr.PostCommands) > 0 {
 					log.Printf("Found %d post operation commands\n", len(cr.PostCommands))
 					for _, commandContent := range cr.PostCommands {
-						parts := strings.Split(commandContent, " ")
-						cmd := exec.Command(parts[0], parts[1:]...)
+						cmd := exec.Command("bash", "-c", commandContent)
 						log.Printf("Command to be executed: %s\n", cmd.String())
 						output, err := cmd.Output()
 						if err != nil {
