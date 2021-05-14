@@ -36,6 +36,7 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
+	fmt.Println("Debug:", conf)
 	setCaHost(conf.SimpleCA.Host, conf.SimpleCA.SkipVerify)
 
 	log.Println("Starting up...")
@@ -59,20 +60,23 @@ func main() {
 			continue
 		}
 
-		_, err = c.AddFunc("@daily", func() {
+		_, err = c.AddFunc("@every 20s", func() {
 
 			necessary, err := checkIfDueForRenewal(cr)
 			if err != nil {
 				log.Printf("Could not determine renewal necessity for file '%s': %s\n", reqFile.Name(), err.Error())
 				return
 			}
-			if necessary {
+			if !necessary {
+				log.Printf("Cert '%s' is NOT due for renewal, skipping\n", cr.CertFile)
+			} else {
+				log.Printf("Cert '%s' is due for renewal, requesting...\n", cr.CertFile)
 				err = requestNewKeyAndCert(cr)
 				if err != nil {
 					log.Printf("could not request new key/cert: %s\n", err.Error())
 					return
 				}
-
+				log.Printf("Cert '%s' successfully renewed!\n", cr.CertFile)
 				// execute optional commands after fetching new cert
 				if cr.PostCommands != nil && len(cr.PostCommands) > 0 {
 					log.Printf("Found %d post operation commands\n", len(cr.PostCommands))

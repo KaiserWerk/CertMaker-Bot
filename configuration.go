@@ -18,13 +18,13 @@ func getConfiguration() (*configuration, error) {
 		return nil, err
 	}
 
-	var c *configuration
+	var c configuration
 	err = yaml.Unmarshal(cont, &c)
 	if err != nil {
 		return nil, err
 	}
 
-	return c, err
+	return &c, err
 }
 
 func setupConfiguration() (*configuration, error) {

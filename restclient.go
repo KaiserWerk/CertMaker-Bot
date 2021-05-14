@@ -10,7 +10,7 @@ import (
 
 var (
 	client     = http.Client{Timeout: 3 * time.Second}
-	caHost     = "http://localhost:8880/"
+	caHost     = "http://localhost:8880"
 	skipVerify = false
 )
 
@@ -43,23 +43,20 @@ func getTlsConfig() *tls.Config {
 func executeRequest(r *http.Request) (*http.Response, error) {
 	cl := getClient()
 
+	//fmt.Sprintf("executeRequest: using CA host %s..\n", caHost)
 	hostUrl, err := url.ParseRequestURI(caHost)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse CA host '%s': %s", caHost, err.Error())
 	}
 
 	if hostUrl.Scheme == "https" {
 		cl.Transport = &http.Transport{TLSClientConfig: getTlsConfig()}
 	}
 
-	path := r.URL.String()
+	//log.Printf("Using CA Host %s...\n", caHost)
 
-	fullUrl, err := url.Parse(fmt.Sprintf("%s/%s", caHost, path))
-	if err != nil {
-		return nil, err
-	}
-
-	r.URL = fullUrl
+	r.URL.Host = hostUrl.Host
+	r.URL.Scheme = hostUrl.Scheme
 
 	resp, err := cl.Do(r)
 	if err != nil {

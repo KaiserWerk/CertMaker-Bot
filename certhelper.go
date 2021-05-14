@@ -6,10 +6,12 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 )
 
 func getRequirementsFromFile(file string) (*certificateRequirement, error) {
@@ -19,7 +21,7 @@ func getRequirementsFromFile(file string) (*certificateRequirement, error) {
 	}
 
 	var cr certificateRequirement
-	err = json.Unmarshal(fileCont, &cr)
+	err = yaml.Unmarshal(fileCont, &cr)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +44,7 @@ func checkIfDueForRenewal(cr *certificateRequirement) (bool, error) {
 		}
 
 		diff := cert.NotAfter.Sub(cert.NotBefore)
-		fmt.Println("Debug:", diff)
+
 		if diff.Hours()/24 < 5 { // if validity < 5 days
 			requestNew = true
 		}
@@ -86,6 +88,10 @@ func requestNewKeyAndCert(cr *certificateRequirement) error {
 	if err != nil {
 		return err
 	}
+	err = os.MkdirAll(filepath.Dir(cr.CertFile), 0600)
+	if err != nil {
+		return err
+	}
 	dstWriter, err := os.Create(cr.CertFile)
 	if err != nil {
 		return err
@@ -95,12 +101,17 @@ func requestNewKeyAndCert(cr *certificateRequirement) error {
 		return err
 	}
 	_ = certReq.Body.Close()
+	_ = dstWriter.Close()
 
 	req, err = http.NewRequest(http.MethodGet, resp.Header.Get("X-Privatekey-Location"), nil)
 	if err != nil {
 		return err
 	}
 	keyReq, err := executeRequest(req)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(filepath.Dir(cr.KeyFile), 0600)
 	if err != nil {
 		return err
 	}
@@ -113,6 +124,7 @@ func requestNewKeyAndCert(cr *certificateRequirement) error {
 		return err
 	}
 	_ = keyReq.Body.Close()
+	_ = dstWriter.Close()
 
 	return nil
 }
