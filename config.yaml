@@ -1,4 +1,0 @@
-simplecs:
-    host: 'http://localhost.com:8880'
-    tls_verify: false
-    apikey: <your key>
