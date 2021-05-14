@@ -1,24 +1,26 @@
 package main
 
 type configuration struct {
-	SimpleCA struct{
-		Host string `json:"host"`
-		ApiKey string `json:"apikey"`
-	} `json:"simpleca"`
+	SimpleCA struct {
+		Host       string `yaml:"host"`
+		SkipVerify bool   `yaml:"skip_verify"`
+		ApiKey     string `yaml:"apikey"`
+	} `yaml:"simpleca"`
 }
 
 type certificateRequirement struct {
-	Domains []string `json:"domains"`
-	IPs     []string `json:"ips"`
+	Domains []string `yaml:"domains"`
+	IPs     []string `yaml:"ips"`
 	Subject struct {
-		Organization  string `json:"organization"`
-		Country       string `json:"country"`
-		Province      string `json:"province"`
-		Locality      string `json:"locality"`
-		StreetAddress string `json:"street_address"`
-		PostalCode    string `json:"postal_code"`
-	} `json:"subject"`
-	Days int `json:"days"`
-	CertFile string `json:"cert_file"`
-	KeyFile string `json:"key_file"`
+		Organization  string `yaml:"organization"`
+		Country       string `yaml:"country"`
+		Province      string `yaml:"province"`
+		Locality      string `yaml:"locality"`
+		StreetAddress string `yaml:"street_address"`
+		PostalCode    string `yaml:"postal_code"`
+	} `yaml:"subject"`
+	Days     int    `yaml:"days"`
+	CertFile string `yaml:"cert_file"`
+	KeyFile  string `yaml:"key_file"`
+	PostCommands []string `yaml:"post_commands,omitempty"`
 }

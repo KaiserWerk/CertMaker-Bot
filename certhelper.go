@@ -10,70 +10,62 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"time"
 )
 
-var client = http.Client{Timeout: 3 * time.Second}
-
-func requestIfNecessary(file string) error {
-	var err error
-
+func getRequirementsFromFile(file string) (*certificateRequirement, error) {
 	fileCont, err := ioutil.ReadFile(file)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var cr certificateRequirement
 	err = json.Unmarshal(fileCont, &cr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	return &cr, nil
+}
+
+func checkIfDueForRenewal(cr *certificateRequirement) (bool, error) {
 	requestNew := false
 
 	if fileExists(cr.KeyFile) && fileExists(cr.CertFile) {
 		pairFiles, err := tls.LoadX509KeyPair(cr.CertFile, cr.KeyFile)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		cert, err := x509.ParseCertificate(pairFiles.Certificate[0])
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		diff := cert.NotAfter.Sub(cert.NotBefore)
 		fmt.Println("Debug:", diff)
-		if diff.Hours() / 24 < 5 { // if validity < 5 days
+		if diff.Hours()/24 < 5 { // if validity < 5 days
 			requestNew = true
 		}
 	} else {
 		requestNew = true
 	}
 
-	if requestNew {
-		err = requestNewKeyAndCert(cr)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return requestNew, nil
 }
 
-func requestNewKeyAndCert(cr certificateRequirement) error {
+func requestNewKeyAndCert(cr *certificateRequirement) error {
 	jsonCont, err := json.Marshal(cr)
 	if err != nil {
 		return err
 	}
 	b := bytes.NewBuffer(jsonCont)
-	// TODO base addr from config!!
+
 	req, err := http.NewRequest(http.MethodPost, "/api/certificate/request", b)
 	if err != nil {
 		return err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := executeRequest(req)
 	if err != nil {
 		return err
 	}
@@ -86,7 +78,11 @@ func requestNewKeyAndCert(cr certificateRequirement) error {
 		return fmt.Errorf("missing headers X-Certificate-Location and X-Privatekey-Location")
 	}
 
-	certReq, err := client.Get(resp.Header.Get("X-Certificate-Location"))
+	req, err = http.NewRequest(http.MethodGet, resp.Header.Get("X-Certificate-Location"), nil)
+	if err != nil {
+		return err
+	}
+	certReq, err := executeRequest(req)
 	if err != nil {
 		return err
 	}
@@ -100,7 +96,11 @@ func requestNewKeyAndCert(cr certificateRequirement) error {
 	}
 	_ = certReq.Body.Close()
 
-	keyReq, err := client.Get(resp.Header.Get("X-Privatekey-Location"))
+	req, err = http.NewRequest(http.MethodGet, resp.Header.Get("X-Privatekey-Location"), nil)
+	if err != nil {
+		return err
+	}
+	keyReq, err := executeRequest(req)
 	if err != nil {
 		return err
 	}
