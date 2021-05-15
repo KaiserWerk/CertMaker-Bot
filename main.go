@@ -60,7 +60,7 @@ func main() {
 			continue
 		}
 
-		_, err = c.AddFunc("@every 20s", func() {
+		_, err = c.AddFunc("@every 1h", func() {
 
 			necessary, err := checkIfDueForRenewal(cr)
 			if err != nil {
