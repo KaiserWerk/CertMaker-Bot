@@ -36,7 +36,7 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Println("Debug:", conf)
+
 	setCaHost(conf.SimpleCA.Host, conf.SimpleCA.SkipVerify)
 
 	log.Println("Starting up...")
