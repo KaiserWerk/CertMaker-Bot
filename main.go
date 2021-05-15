@@ -31,7 +31,7 @@ func main() {
 	if *certDirPtr != "" {
 		certDir = *certDirPtr
 	}
-	_ = os.MkdirAll(certDir, 0600)
+	_ = os.MkdirAll(certDir, 0700)
 	conf, err := setupConfiguration()
 	if err != nil {
 		panic(err.Error())
