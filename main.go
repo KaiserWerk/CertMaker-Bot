@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/robfig/cron/v3"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -23,6 +24,14 @@ func main() {
 	configFilePtr := flag.String("c", "", "The configuration file to use")
 	certDirPtr := flag.String("d", "", "The folder which contains the certificate requirements (relative or absolute)")
 	flag.Parse()
+
+	// log to file
+	logHandle, err := os.Create("certmaker-bot.log")
+	if err != nil {
+		log.Fatal("cannot create log file!")
+	}
+	defer logHandle.Close()
+	log.SetOutput(io.MultiWriter(os.Stdout, logHandle))
 
 	// configuration stuff
 	if *configFilePtr != "" {
