@@ -3,3 +3,4 @@ req/
 build/
 
 config.yaml
+certmaker-bot.log

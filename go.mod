@@ -1,4 +1,4 @@
-module github.com/KaiserWerk/simpleca-bot
+module github.com/KaiserWerk/CertMaker-Bot
 
 go 1.16
 

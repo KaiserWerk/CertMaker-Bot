@@ -1,4 +1,4 @@
-package main
+package certmaker
 
 import (
 	"bytes"
@@ -6,6 +6,9 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/KaiserWerk/CertMaker-Bot/internal/entity"
+	helper2 "github.com/KaiserWerk/CertMaker-Bot/internal/helper"
+	"github.com/KaiserWerk/CertMaker-Bot/internal/restclient"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
@@ -14,13 +17,13 @@ import (
 	"path/filepath"
 )
 
-func getRequirementsFromFile(file string) (*certificateRequirement, error) {
+func GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error) {
 	fileCont, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
 
-	var cr certificateRequirement
+	var cr entity.CertificateRequirement
 	err = yaml.Unmarshal(fileCont, &cr)
 	if err != nil {
 		return nil, err
@@ -29,10 +32,10 @@ func getRequirementsFromFile(file string) (*certificateRequirement, error) {
 	return &cr, nil
 }
 
-func checkIfDueForRenewal(cr *certificateRequirement) (bool, error) {
+func CheckIfDueForRenewal(cr *entity.CertificateRequirement) (bool, error) {
 	requestNew := false
 
-	if fileExists(cr.KeyFile) && fileExists(cr.CertFile) {
+	if helper2.FileExists(cr.KeyFile) && helper2.FileExists(cr.CertFile) {
 		pairFiles, err := tls.LoadX509KeyPair(cr.CertFile, cr.KeyFile)
 		if err != nil {
 			return false, err
@@ -55,7 +58,7 @@ func checkIfDueForRenewal(cr *certificateRequirement) (bool, error) {
 	return requestNew, nil
 }
 
-func requestNewKeyAndCert(cr *certificateRequirement) error {
+func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
 	jsonCont, err := json.Marshal(cr)
 	if err != nil {
 		return err
@@ -67,7 +70,7 @@ func requestNewKeyAndCert(cr *certificateRequirement) error {
 		return err
 	}
 
-	resp, err := executeRequest(req)
+	resp, err := restclient.ExecuteRequest(req)
 	if err != nil {
 		return err
 	}
@@ -84,7 +87,7 @@ func requestNewKeyAndCert(cr *certificateRequirement) error {
 	if err != nil {
 		return err
 	}
-	certReq, err := executeRequest(req)
+	certReq, err := restclient.ExecuteRequest(req)
 	if err != nil {
 		return err
 	}
@@ -107,7 +110,7 @@ func requestNewKeyAndCert(cr *certificateRequirement) error {
 	if err != nil {
 		return err
 	}
-	keyReq, err := executeRequest(req)
+	keyReq, err := restclient.ExecuteRequest(req)
 	if err != nil {
 		return err
 	}
@@ -129,10 +132,3 @@ func requestNewKeyAndCert(cr *certificateRequirement) error {
 	return nil
 }
 
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}

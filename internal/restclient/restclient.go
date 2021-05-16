@@ -1,8 +1,9 @@
-package main
+package restclient
 
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/KaiserWerk/CertMaker-Bot/internal/configuration"
 	"net/http"
 	"net/url"
 	"time"
@@ -15,16 +16,16 @@ var (
 
 )
 
-func getClient() *http.Client {
+func GetClient() *http.Client {
 	return &client
 }
 
-func setCaHost(h string, skip bool) {
+func SetCaHost(h string, skip bool) {
 	caHost = h
 	skipVerify = skip
 }
 
-func getTlsConfig() *tls.Config {
+func GetTlsConfig() *tls.Config {
 	config := &tls.Config{
 		// CipherSuites not needed with TLS 1.3
 		//CipherSuites: []uint16{
@@ -42,8 +43,8 @@ func getTlsConfig() *tls.Config {
 	return config
 }
 
-func executeRequest(r *http.Request) (*http.Response, error) {
-	cl := getClient()
+func ExecuteRequest(r *http.Request) (*http.Response, error) {
+	cl := GetClient()
 
 	//fmt.Sprintf("executeRequest: using CA host %s..\n", caHost)
 	hostUrl, err := url.ParseRequestURI(caHost)
@@ -52,15 +53,15 @@ func executeRequest(r *http.Request) (*http.Response, error) {
 	}
 
 	if hostUrl.Scheme == "https" {
-		cl.Transport = &http.Transport{TLSClientConfig: getTlsConfig()}
+		cl.Transport = &http.Transport{TLSClientConfig: GetTlsConfig()}
 	}
 
-	//log.Printf("Using CA Host %s...\n", caHost)
+	//logger.Printf("Using CA Host %s...\n", caHost)
 
 	r.URL.Host = hostUrl.Host
 	r.URL.Scheme = hostUrl.Scheme
 
-	config, err := getConfiguration()
+	config, err := configuration.GetConfiguration()
 	if err != nil {
 		return nil, err
 	}

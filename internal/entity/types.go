@@ -1,6 +1,6 @@
-package main
+package entity
 
-type configuration struct {
+type Configuration struct {
 	SimpleCA struct {
 		Host       string `yaml:"host"`
 		SkipVerify bool   `yaml:"skip_verify"`
@@ -8,7 +8,7 @@ type configuration struct {
 	} `yaml:"simpleca"`
 }
 
-type certificateRequirement struct {
+type CertificateRequirement struct {
 	Domains []string `yaml:"domains"`
 	IPs     []string `yaml:"ips"`
 	Subject struct {
