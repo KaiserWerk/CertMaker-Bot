@@ -60,7 +60,7 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	restclient.SetCaHost(conf.SimpleCA.Host, conf.SimpleCA.SkipVerify)
+	restclient.SetCaHost(conf.CertMaker.Host, conf.CertMaker.SkipVerify)
 
 	logger.Println("Starting up...")
 
