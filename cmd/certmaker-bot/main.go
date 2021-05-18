@@ -20,13 +20,13 @@ import (
 )
 
 var (
-	certDir = "./req"
+	reqDir = "./req"
 )
 
 func main() {
 	// command line flags
 	configFilePtr := flag.String("config", "", "The configuration file to use")
-	certDirPtr := flag.String("dir", "", "The folder which contains the certificate requirements")
+	reqDirPtr := flag.String("req", "", "The folder which contains the certificate requirements")
 	asServicePtr := flag.Bool("as-service", false, "Whether to start as a service or not")
 	flag.Parse()
 
@@ -37,10 +37,11 @@ func main() {
 	}
 	defer logHandle.Close()
 
+	// set up logger stuff
 	var logger *log.Logger
 	if *asServicePtr {
 		// log to file as well
-		logger = log.New(io.MultiWriter(os.Stdout, logHandle), "", log.Lshortfile)
+		logger = log.New(io.MultiWriter(os.Stdout, logHandle), "", log.LstdFlags)
 	} else {
 		logger = log.New(os.Stdout, "", log.LstdFlags | log.Lmicroseconds | log.Llongfile)
 	}
@@ -50,10 +51,10 @@ func main() {
 	if *configFilePtr != "" {
 		configuration.SetConfigurationFile(*configFilePtr)
 	}
-	if *certDirPtr != "" {
-		certDir = *certDirPtr
+	if *reqDirPtr != "" {
+		reqDir = *reqDirPtr
 	}
-	_ = os.MkdirAll(certDir, 0700)
+	_ = os.MkdirAll(reqDir, 0755)
 	conf, err := configuration.SetupConfiguration()
 	if err != nil {
 		logger.Fatal(err.Error())
@@ -64,7 +65,7 @@ func main() {
 	logger.Println("Starting up...")
 
 	// handle certificate requests
-	fi, err := ioutil.ReadDir(certDir)
+	fi, err := ioutil.ReadDir(reqDir)
 	if err != nil {
 		logger.Fatal("could not read requirements files: " + err.Error())
 	}
@@ -75,7 +76,7 @@ func main() {
 			logger.Printf("Ignoring file '%s'; not a yaml file\n", reqFile.Name())
 			continue
 		}
-		fileWithPath := filepath.Join(certDir, reqFile.Name())
+		fileWithPath := filepath.Join(reqDir, reqFile.Name())
 		cr, err := certmaker.GetRequirementsFromFile(fileWithPath)
 		if err != nil {
 			logger.Printf("could not get requirements from file '%s': %s\n", fileWithPath, err.Error())
@@ -90,7 +91,8 @@ func main() {
 				return
 			}
 			if !necessary {
-				logger.Printf("Cert '%s' is NOT due for renewal, skipping\n", cr.CertFile)
+				//too much debug output
+				//logger.Printf("Cert '%s' is NOT due for renewal, skipping\n", cr.CertFile)
 			} else {
 				logger.Printf("Cert '%s' is due for renewal, requesting...\n", cr.CertFile)
 				err = certmaker.RequestNewKeyAndCert(cr)
