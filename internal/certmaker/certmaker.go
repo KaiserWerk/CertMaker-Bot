@@ -91,7 +91,7 @@ func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
 	if err != nil {
 		return err
 	}
-	err = os.MkdirAll(filepath.Dir(cr.CertFile), 0700)
+	err = os.MkdirAll(filepath.Dir(cr.CertFile), 0755)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
 	if err != nil {
 		return err
 	}
-	err = os.MkdirAll(filepath.Dir(cr.KeyFile), 0700)
+	err = os.MkdirAll(filepath.Dir(cr.KeyFile), 0755)
 	if err != nil {
 		return err
 	}
