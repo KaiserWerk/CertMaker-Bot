@@ -1,11 +1,11 @@
 package entity
 
 type Configuration struct {
-	SimpleCA struct {
+	CertMaker struct {
 		Host       string `yaml:"host"`
 		SkipVerify bool   `yaml:"skip_verify"`
 		ApiKey     string `yaml:"apikey"`
-	} `yaml:"simpleca"`
+	} `yaml:"certmaker"`
 }
 
 type CertificateRequirement struct {
@@ -18,7 +18,7 @@ type CertificateRequirement struct {
 		Locality      string `yaml:"locality"`
 		StreetAddress string `yaml:"street_address"`
 		PostalCode    string `yaml:"postal_code"`
-	} `yaml:"subject"`
+	} `yaml:"subject,omitempty"`
 	Days     int    `yaml:"days"`
 	CertFile string `yaml:"cert_file"`
 	KeyFile  string `yaml:"key_file"`
