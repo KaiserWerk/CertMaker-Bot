@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/entity"
-	helper2 "github.com/KaiserWerk/CertMaker-Bot/internal/helper"
+	"github.com/KaiserWerk/CertMaker-Bot/internal/helper"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/restclient"
 	"gopkg.in/yaml.v2"
 	"io"
@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error) {
@@ -34,21 +35,20 @@ func GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error
 
 func CheckIfDueForRenewal(cr *entity.CertificateRequirement) (bool, error) {
 	requestNew := false
-
-	if helper2.FileExists(cr.KeyFile) && helper2.FileExists(cr.CertFile) {
+	if helper.FileExists(cr.KeyFile) && helper.FileExists(cr.CertFile) {
 		pairFiles, err := tls.LoadX509KeyPair(cr.CertFile, cr.KeyFile)
 		if err != nil {
-			return false, err
+			return true, err
 		}
 
 		cert, err := x509.ParseCertificate(pairFiles.Certificate[0])
 		if err != nil {
-			return false, err
+			return true, err
 		}
 
-		diff := cert.NotAfter.Sub(cert.NotBefore)
+		diff := cert.NotAfter.Sub(time.Now())
 
-		if diff.Hours()/24 < 5 { // if validity < 5 days
+		if diff.Hours()/24 < 3 { // if validity < 3 days
 			requestNew = true
 		}
 	} else {
