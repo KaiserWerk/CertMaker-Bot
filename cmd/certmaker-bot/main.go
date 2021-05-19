@@ -7,16 +7,14 @@ import (
 	"github.com/KaiserWerk/CertMaker-Bot/internal/configuration"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/logging"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/restclient"
-	"github.com/robfig/cron/v3"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
+	"time"
 )
 
 var (
@@ -38,12 +36,17 @@ func main() {
 	defer logHandle.Close()
 
 	// set up logger stuff
-	var logger *log.Logger
+	var (
+		logger *log.Logger
+		duration time.Duration
+	)
 	if *asServicePtr {
 		// log to file as well
 		logger = log.New(io.MultiWriter(os.Stdout, logHandle), "", log.LstdFlags)
+		duration = 1 * time.Hour
 	} else {
-		logger = log.New(os.Stdout, "", log.LstdFlags | log.Lmicroseconds | log.Llongfile)
+		logger = log.New(os.Stdout, "", log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
+		duration = 15 * time.Second
 	}
 	logging.SetLogger(logger)
 
@@ -64,26 +67,27 @@ func main() {
 
 	logger.Println("Starting up...")
 
-	// handle certificate requests
-	fi, err := ioutil.ReadDir(reqDir)
-	if err != nil {
-		logger.Fatal("could not read requirements files: " + err.Error())
-	}
-
-	c := cron.New()
-	for _, reqFile := range fi {
-		if !strings.HasSuffix(reqFile.Name(), ".yaml") {
-			logger.Printf("Ignoring file '%s'; not a yaml file\n", reqFile.Name())
-			continue
-		}
-		fileWithPath := filepath.Join(reqDir, reqFile.Name())
-		cr, err := certmaker.GetRequirementsFromFile(fileWithPath)
+	for {
+		logger.Println(strings.Repeat("-", 20))
+		// handle certificate requests
+		fi, err := ioutil.ReadDir(reqDir)
 		if err != nil {
-			logger.Printf("could not get requirements from file '%s': %s\n", fileWithPath, err.Error())
-			continue
+			logger.Fatal("could not read requirements files: " + err.Error())
 		}
-
-		_, err = c.AddFunc("@every 1h", func() {
+		logger.Printf("Found %d files total\n", len(fi))
+		var certsToRenew uint8 = 0
+		for _, reqFile := range fi {
+			if !strings.HasSuffix(reqFile.Name(), ".yaml") {
+				logger.Printf("Ignoring file '%s'; not a yaml file\n", reqFile.Name())
+				continue
+			}
+			logger.Printf("Found req file '%s'\n", reqFile.Name())
+			fileWithPath := filepath.Join(reqDir, reqFile.Name())
+			cr, err := certmaker.GetRequirementsFromFile(fileWithPath)
+			if err != nil {
+				logger.Printf("could not get requirements from file '%s': %s\n", fileWithPath, err.Error())
+				continue
+			}
 
 			necessary, err := certmaker.CheckIfDueForRenewal(cr)
 			if err != nil {
@@ -94,6 +98,7 @@ func main() {
 				//too much debug output
 				//logger.Printf("Cert '%s' is NOT due for renewal, skipping\n", cr.CertFile)
 			} else {
+				certsToRenew++
 				logger.Printf("Cert '%s' is due for renewal, requesting...\n", cr.CertFile)
 				err = certmaker.RequestNewKeyAndCert(cr)
 				if err != nil {
@@ -119,17 +124,16 @@ func main() {
 					}
 				}
 			}
-		})
-		if err != nil {
-			logger.Printf("Could not enqueue file '%s': %s\n", reqFile.Name(), err.Error())
-			continue
 		}
-	}
-	c.Start()
 
-	// block until further notice
-	notify := make(chan os.Signal)
-	signal.Notify(notify, os.Interrupt, os.Kill, syscall.SIGTERM)
-	<-notify
-	logger.Println("Shutdown complete")
+		if certsToRenew > 1 {
+			logger.Printf("Renewed %d certificates\n", certsToRenew)
+		} else if certsToRenew == 1 {
+			logger.Println("Renewed 1 certificate")
+		} else {
+			logger.Println("No certificate renewed")
+		}
+
+		<- time.After(duration)
+	}
 }
