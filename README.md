@@ -11,8 +11,9 @@ Example:
 ./certmaker-bot --req /some/other/dir
 ```
 
-To configure the app, there needs to be a `config.yml` file besides the binary. If it doesn't exist,
-it will be created at startup.
+To configure the app, there needs to be a `config.yml` file, by default besides the binary. If it 
+doesn't exist, it will be created at startup. If you want to use a different location, use the
+parameter *--config*
 
 Eample:
 ```bash
@@ -21,6 +22,8 @@ Eample:
 
 Usually, all output will be printed to Stdout. If you use the parameter `--as-service`, the log output has
 less meta information, but will be written to the `./certmaker-bot.log` log file.
+Also, the debug interval to check and refresh certificates is 15 seconds; the *"run-as-service"* 
+default is 1 hour.
 
 Eample:
 ```bash
