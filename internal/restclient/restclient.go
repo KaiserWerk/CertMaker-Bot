@@ -13,7 +13,6 @@ var (
 	client     = http.Client{Timeout: 3 * time.Second}
 	caHost     = "http://localhost:8880"
 	skipVerify = false
-
 )
 
 func GetClient() *http.Client {
@@ -37,7 +36,7 @@ func GetTlsConfig() *tls.Config {
 		InsecureSkipVerify:       false,
 	}
 	if skipVerify {
-		config.InsecureSkipVerify = false
+		config.InsecureSkipVerify = true
 	}
 
 	return config
@@ -46,7 +45,6 @@ func GetTlsConfig() *tls.Config {
 func ExecuteRequest(r *http.Request) (*http.Response, error) {
 	cl := GetClient()
 
-	//fmt.Sprintf("executeRequest: using CA host %s..\n", caHost)
 	hostUrl, err := url.ParseRequestURI(caHost)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse CA host '%s': %s", caHost, err.Error())
@@ -55,8 +53,6 @@ func ExecuteRequest(r *http.Request) (*http.Response, error) {
 	if hostUrl.Scheme == "https" {
 		cl.Transport = &http.Transport{TLSClientConfig: GetTlsConfig()}
 	}
-
-	//logger.Printf("Using CA Host %s...\n", caHost)
 
 	r.URL.Host = hostUrl.Host
 	r.URL.Scheme = hostUrl.Scheme
