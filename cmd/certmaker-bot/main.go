@@ -2,19 +2,23 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/certmaker"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/configuration"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/logging"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/restclient"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+)
+
+const (
+	Version = "0.0.0"
+	VersionDate = "0000-00-00 00:00:00.000 +00:00"
 )
 
 var (
@@ -37,17 +41,22 @@ func main() {
 
 	// set up logger stuff
 	var (
-		logger *log.Logger
+		baseLogger = log.New()
 		duration time.Duration
 	)
+	baseLogger.SetFormatter(&log.JSONFormatter{})
+	baseLogger.SetOutput(io.MultiWriter(os.Stdout, logHandle))
+	//baseLogger.AddHook()
 	if *asServicePtr {
 		// log to file as well
-		logger = log.New(io.MultiWriter(os.Stdout, logHandle), "", log.LstdFlags)
+		baseLogger.SetLevel(log.DebugLevel)
 		duration = 1 * time.Hour
 	} else {
-		logger = log.New(os.Stdout, "", log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
+		baseLogger.SetLevel(log.InfoLevel)
 		duration = 15 * time.Second
 	}
+	logger := baseLogger.WithFields(log.Fields{"application": "certmaker-bot", "server": "appsrv.lan", "version": Version})
+
 	logging.SetLogger(logger)
 
 	// configuration stuff
@@ -65,61 +74,64 @@ func main() {
 
 	restclient.SetCaHost(conf.CertMaker.Host, conf.CertMaker.SkipVerify)
 
-	logger.Println("Starting up...")
+	logger.Debug("Starting up...")
 
 	for {
-		logger.Println(strings.Repeat("-", 20))
+		logger.Debug(strings.Repeat("-", 20))
+
 		// handle certificate requests
 		fi, err := ioutil.ReadDir(reqDir)
 		if err != nil {
-			logger.Fatal("could not read requirements files: " + err.Error())
+			logger.Warning("could not read requirements files: " + err.Error())
+			time.Sleep(duration)
+			continue
 		}
-		logger.Printf("Found %d files total\n", len(fi))
+		logger.Printf("Found %d files total", len(fi))
 		var certsToRenew uint8 = 0
 		for _, reqFile := range fi {
 			if !strings.HasSuffix(reqFile.Name(), ".yaml") {
-				logger.Printf("Ignoring file '%s'; not a yaml file\n", reqFile.Name())
+				logger.Infof("Ignoring file '%s'; not a yaml file", reqFile.Name())
 				continue
 			}
-			logger.Printf("Found req file '%s'\n", reqFile.Name())
+			logger.Debugf("Found requirements file '%s'", reqFile.Name())
 			fileWithPath := filepath.Join(reqDir, reqFile.Name())
 			cr, err := certmaker.GetRequirementsFromFile(fileWithPath)
 			if err != nil {
-				logger.Printf("could not get requirements from file '%s': %s\n", fileWithPath, err.Error())
+				logger.Warningf("could not get requirements from file '%s': %s", fileWithPath, err.Error())
 				continue
 			}
 
 			necessary, err := certmaker.CheckIfDueForRenewal(cr)
 			if err != nil {
-				logger.Printf("Could not determine renewal necessity for file '%s': %s\n", reqFile.Name(), err.Error())
-				return
+				logger.Errorf("Could not determine renewal necessity for file '%s': %s", reqFile.Name(), err.Error())
+				continue
 			}
 			if !necessary {
 				//too much debug output
-				//logger.Printf("Cert '%s' is NOT due for renewal, skipping\n", cr.CertFile)
+				//logger.Printf("Cert '%s' is NOT due for renewal, skipping", cr.CertFile)
 			} else {
 				certsToRenew++
-				logger.Printf("Cert '%s' is due for renewal, requesting...\n", cr.CertFile)
+				logger.Debugf("Cert '%s' is due for renewal, requesting...", cr.CertFile)
 				err = certmaker.RequestNewKeyAndCert(cr)
 				if err != nil {
-					logger.Printf("could not request new key/cert: %s\n", err.Error())
-					return
+					logger.Errorf("could not request new key/cert: %s", err.Error())
+					continue
 				}
-				logger.Printf("Cert '%s' successfully renewed!\n", cr.CertFile)
+				logger.Printf("Cert '%s' successfully renewed!", cr.CertFile)
 				// execute optional commands after fetching new cert
 				if cr.PostCommands != nil && len(cr.PostCommands) > 0 {
-					logger.Printf("Found %d post operation commands\n", len(cr.PostCommands))
+					logger.Debugf("Found %d post operation commands", len(cr.PostCommands))
 					for _, commandContent := range cr.PostCommands {
 						cmd := exec.Command("bash", "-c", commandContent)
-						logger.Printf("Command to be executed: %s\n", cmd.String())
+						logger.Debugf("Command to be executed: %s", cmd.String())
 						output, err := cmd.Output()
 						if err != nil {
-							fmt.Printf("could not execute command '%s': %s\n", cmd.String(), err.Error())
+							logger.Warningf("could not execute command '%s': %s", cmd.String(), err.Error())
 							continue
 						}
 
 						if output != nil && len(output) > 0 {
-							logger.Printf("command '%s' created output: %s\n", cmd.String(), string(output))
+							logger.Debugf("command '%s' created output: %s", cmd.String(), string(output))
 						}
 					}
 				}
@@ -127,13 +139,13 @@ func main() {
 		}
 
 		if certsToRenew > 1 {
-			logger.Printf("Renewed %d certificates\n", certsToRenew)
+			logger.Infof("Renewed %d certificates", certsToRenew)
 		} else if certsToRenew == 1 {
-			logger.Println("Renewed 1 certificate")
+			logger.Info("Renewed 1 certificate")
 		} else {
-			logger.Println("No certificate renewed")
+			logger.Info("No certificate renewed")
 		}
 
-		<- time.After(duration)
+		time.Sleep(duration)
 	}
 }
