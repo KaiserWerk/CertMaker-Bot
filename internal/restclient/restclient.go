@@ -61,7 +61,8 @@ func ExecuteRequest(r *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.CertMaker.ApiKey))
+	//r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.CertMaker.ApiKey))
+	r.Header.Set("X-Auth-Token", config.CertMaker.ApiKey)
 
 	resp, err := cl.Do(r)
 	if err != nil {
