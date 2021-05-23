@@ -48,7 +48,6 @@ func main() {
 	baseLogger.SetOutput(io.MultiWriter(os.Stdout, logHandle))
 	//baseLogger.AddHook()
 	if *asServicePtr {
-		// log to file as well
 		baseLogger.SetLevel(log.DebugLevel)
 		duration = 1 * time.Hour
 	} else {
