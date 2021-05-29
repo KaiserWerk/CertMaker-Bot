@@ -18,6 +18,10 @@ import (
 	"time"
 )
 
+const (
+	minCertValidity = 3 // in days
+)
+
 func GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error) {
 	fileCont, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -33,29 +37,30 @@ func GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error
 	return &cr, nil
 }
 
-func CheckIfDueForRenewal(cr *entity.CertificateRequirement) (bool, error) {
-	requestNew := false
-	if helper.FileExists(cr.KeyFile) && helper.FileExists(cr.CertFile) {
-		pairFiles, err := tls.LoadX509KeyPair(cr.CertFile, cr.KeyFile)
-		if err != nil {
-			return true, err
-		}
-
-		cert, err := x509.ParseCertificate(pairFiles.Certificate[0])
-		if err != nil {
-			return true, err
-		}
-
-		diff := cert.NotAfter.Sub(time.Now())
-
-		if diff.Hours()/24 < 3 { // if validity < 3 days
-			requestNew = true
-		}
-	} else {
-		requestNew = true
+func CheckIfDueForRenewal(cr *entity.CertificateRequirement) error {
+	if !helper.FileExists(cr.KeyFile) || !helper.FileExists(cr.CertFile) {
+		return fmt.Errorf("certificate or key file does not exist")
 	}
 
-	return requestNew, nil
+	pairFiles, err := tls.LoadX509KeyPair(cr.CertFile, cr.KeyFile)
+	if err != nil {
+		return err
+	}
+
+	cert, err := x509.ParseCertificate(pairFiles.Certificate[0])
+	if err != nil {
+		return err
+	}
+
+	diff := cert.NotAfter.Sub(time.Now())
+
+	if diff.Hours() < 24 * minCertValidity {
+		return fmt.Errorf("certificate is invalid; remaining valididy of %f hours is below threshold of %d hours", diff.Hours(), 24 * minCertValidity)
+	}
+
+	// TODO check OCSP responder
+
+	return nil
 }
 
 func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
