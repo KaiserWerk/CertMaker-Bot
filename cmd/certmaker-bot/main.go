@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -23,17 +24,18 @@ const (
 
 var (
 	reqDir = "./req"
+	// command line flags
+	configFilePtr = flag.String("config", "", "The configuration file to use")
+	reqDirPtr = flag.String("req", "", "The folder which contains the certificate requirements")
+	asServicePtr = flag.Bool("as-service", false, "Whether to start in service mode or not")
+	logFilePtr = flag.String("logfile", "certmaker-bot.log", "The log file to log to in service mode")
 )
 
 func main() {
-	// command line flags
-	configFilePtr := flag.String("config", "", "The configuration file to use")
-	reqDirPtr := flag.String("req", "", "The folder which contains the certificate requirements")
-	asServicePtr := flag.Bool("as-service", false, "Whether to start as a service or not")
-	flag.Parse()
 
+	flag.Parse()
 	// open the log file
-	logHandle, err := os.Create("certmaker-bot.log")
+	logHandle, err := os.Create(*logFilePtr)
 	if err != nil {
 		log.Fatal("cannot create log file!")
 	}
@@ -44,14 +46,16 @@ func main() {
 		baseLogger = log.New()
 		duration time.Duration
 	)
-	baseLogger.SetFormatter(&log.JSONFormatter{})
-	baseLogger.SetOutput(io.MultiWriter(os.Stdout, logHandle))
-	//baseLogger.AddHook()
+
 	if *asServicePtr {
-		baseLogger.SetLevel(log.DebugLevel)
+		baseLogger.SetFormatter(&log.JSONFormatter{})
+		baseLogger.SetOutput(io.MultiWriter(os.Stdout, logHandle))
+		baseLogger.SetLevel(log.InfoLevel)
 		duration = 1 * time.Hour
 	} else {
-		baseLogger.SetLevel(log.InfoLevel)
+		baseLogger.SetFormatter(&log.TextFormatter{})
+		baseLogger.SetOutput(os.Stdout)
+		baseLogger.SetLevel(log.TraceLevel)
 		duration = 15 * time.Second
 	}
 	logger := baseLogger.WithFields(log.Fields{"application": "certmaker-bot", "server": "appsrv.lan", "version": Version})
@@ -100,38 +104,42 @@ func main() {
 				continue
 			}
 
-			necessary, err := certmaker.CheckIfDueForRenewal(cr)
+			err = certmaker.CheckIfDueForRenewal(cr)
 			if err != nil {
 				logger.Errorf("Could not determine renewal necessity for file '%s': %s", reqFile.Name(), err.Error())
 				continue
 			}
-			if !necessary {
-				//too much debug output
-				//logger.Printf("Cert '%s' is NOT due for renewal, skipping", cr.CertFile)
-			} else {
-				certsToRenew++
-				logger.Debugf("Cert '%s' is due for renewal, requesting...", cr.CertFile)
-				err = certmaker.RequestNewKeyAndCert(cr)
-				if err != nil {
-					logger.Errorf("could not request new key/cert: %s", err.Error())
-					continue
-				}
-				logger.Printf("Cert '%s' successfully renewed!", cr.CertFile)
-				// execute optional commands after fetching new cert
-				if cr.PostCommands != nil && len(cr.PostCommands) > 0 {
-					logger.Debugf("Found %d post operation commands", len(cr.PostCommands))
-					for _, commandContent := range cr.PostCommands {
-						cmd := exec.Command("bash", "-c", commandContent)
-						logger.Debugf("Command to be executed: %s", cmd.String())
-						output, err := cmd.Output()
-						if err != nil {
-							logger.Warningf("could not execute command '%s': %s", cmd.String(), err.Error())
-							continue
-						}
 
-						if output != nil && len(output) > 0 {
-							logger.Debugf("command '%s' created output: %s", cmd.String(), string(output))
-						}
+			certsToRenew++
+			logger.Debugf("Cert '%s' is due for renewal, requesting...", cr.CertFile)
+			err = certmaker.RequestNewKeyAndCert(cr)
+			if err != nil {
+				logger.Errorf("could not request new key/cert: %s", err.Error())
+				continue
+			}
+
+			logger.Printf("Cert '%s' successfully renewed!", cr.CertFile)
+			// execute optional commands after fetching new cert
+			if cr.PostCommands != nil && len(cr.PostCommands) > 0 {
+				logger.Debugf("Found %d post operation commands", len(cr.PostCommands))
+				for _, commandContent := range cr.PostCommands {
+					var cmd *exec.Cmd
+					if runtime.GOOS == "linux" {
+						cmd = exec.Command("bash", "-c", commandContent)
+					} else if runtime.GOOS == "windows" {
+						cmd = exec.Command("cmd", "/c", commandContent)
+					} else if runtime.GOOS == "darwin" {
+						// TODO ?
+					}
+					logger.Debugf("Command to be executed: %s", cmd.String())
+					output, err := cmd.Output()
+					if err != nil {
+						logger.Warningf("could not execute command '%s': %s", cmd.String(), err.Error())
+						continue
+					}
+
+					if output != nil && len(output) > 0 {
+						logger.Debugf("command '%s' created output: %s", cmd.String(), string(output))
 					}
 				}
 			}
