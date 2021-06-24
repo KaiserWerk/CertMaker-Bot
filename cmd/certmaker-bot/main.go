@@ -32,10 +32,9 @@ var (
 )
 
 func main() {
-
 	flag.Parse()
 	// open the log file
-	logHandle, err := os.Create(*logFilePtr)
+	logHandle, err := os.OpenFile(*logFilePtr, os.O_APPEND | os.O_CREATE | os.O_WRONLY, 0700)
 	if err != nil {
 		log.Fatal("cannot create log file!")
 	}
@@ -58,7 +57,7 @@ func main() {
 		baseLogger.SetLevel(log.TraceLevel)
 		duration = 15 * time.Second
 	}
-	logger := baseLogger.WithFields(log.Fields{"application": "certmaker-bot", "server": "appsrv.lan", "version": Version})
+	logger := baseLogger.WithFields(log.Fields{"application": "certmaker-bot", "version": Version})
 
 	logging.SetLogger(logger)
 
