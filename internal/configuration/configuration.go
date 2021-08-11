@@ -3,7 +3,7 @@ package configuration
 import (
 	"github.com/KaiserWerk/CertMaker-Bot/internal/assets"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/entity"
-	helper2 "github.com/KaiserWerk/CertMaker-Bot/internal/helper"
+	helper "github.com/KaiserWerk/CertMaker-Bot/internal/helper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -31,9 +31,9 @@ func GetConfiguration() (*entity.Configuration, error) {
 }
 
 func SetupConfiguration() (*entity.Configuration, error) {
-	if !helper2.FileExists(configFile) {
+	if !helper.FileExists(configFile) {
 		configAssets := assets.GetConfigurationAssets()
-		cont, err := configAssets.ReadFile("assets/config.dist.yaml")
+		cont, err := configAssets.ReadFile("config/config.dist.yaml")
 		if err != nil {
 			return nil, err
 		}

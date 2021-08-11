@@ -19,6 +19,12 @@ import (
 )
 
 const (
+	apiPrefix = "/api/v1"
+	routeRequest = apiPrefix + "/certificate/request"
+
+	locationHeaderCertificate = "X-Certificate-Location"
+	locationHeaderPrivateKey = "X-Privatekey-Location"
+
 	minCertValidity = 3 // in days
 )
 
@@ -37,9 +43,9 @@ func GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error
 	return &cr, nil
 }
 
-func CheckIfDueForRenewal(cr *entity.CertificateRequirement) error {
+func CheckIfDueForRenewal(cr *entity.CertificateRequirement, strict bool) error {
 	if !helper.FileExists(cr.KeyFile) || !helper.FileExists(cr.CertFile) {
-		return fmt.Errorf("certificate or key file does not exist")
+		return nil //fmt.Errorf("certificate or key file does not exist")
 	}
 
 	pairFiles, err := tls.LoadX509KeyPair(cr.CertFile, cr.KeyFile)
@@ -70,7 +76,7 @@ func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
 	}
 	b := bytes.NewBuffer(jsonCont)
 
-	req, err := http.NewRequest(http.MethodPost, "/api/certificate/request", b)
+	req, err := http.NewRequest(http.MethodPost, routeRequest, b)
 	if err != nil {
 		return err
 	}
@@ -84,11 +90,11 @@ func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
 		return fmt.Errorf("expected response status %d, got %d", http.StatusOK, resp.StatusCode)
 	}
 
-	if resp.Header.Get("X-Certificate-Location") == "" || resp.Header.Get("X-Privatekey-Location") == "" {
-		return fmt.Errorf("missing headers X-Certificate-Location and X-Privatekey-Location")
+	if resp.Header.Get(locationHeaderCertificate) == "" || resp.Header.Get(locationHeaderPrivateKey) == "" {
+		return fmt.Errorf("missing headers %s and %s", locationHeaderCertificate, locationHeaderPrivateKey)
 	}
 
-	req, err = http.NewRequest(http.MethodGet, resp.Header.Get("X-Certificate-Location"), nil)
+	req, err = http.NewRequest(http.MethodGet, resp.Header.Get(locationHeaderCertificate), nil)
 	if err != nil {
 		return err
 	}
@@ -111,7 +117,7 @@ func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
 	_ = certReq.Body.Close()
 	_ = dstWriter.Close()
 
-	req, err = http.NewRequest(http.MethodGet, resp.Header.Get("X-Privatekey-Location"), nil)
+	req, err = http.NewRequest(http.MethodGet, resp.Header.Get(locationHeaderPrivateKey), nil)
 	if err != nil {
 		return err
 	}

@@ -103,7 +103,7 @@ func main() {
 				continue
 			}
 
-			err = certmaker.CheckIfDueForRenewal(cr)
+			err = certmaker.CheckIfDueForRenewal(cr, true)
 			if err != nil {
 				logger.Errorf("Could not determine renewal necessity for file '%s': %s", reqFile.Name(), err.Error())
 				continue
