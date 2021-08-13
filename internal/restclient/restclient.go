@@ -33,10 +33,7 @@ func GetTlsConfig() *tls.Config {
 		//},
 		MinVersion:               tls.VersionTLS13,
 		PreferServerCipherSuites: true,
-		InsecureSkipVerify:       false,
-	}
-	if skipVerify {
-		config.InsecureSkipVerify = true
+		InsecureSkipVerify:       skipVerify,
 	}
 
 	return config

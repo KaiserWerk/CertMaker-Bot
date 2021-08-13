@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/certmaker"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/configuration"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/logging"
@@ -17,21 +18,23 @@ import (
 	"time"
 )
 
-const (
-	Version = "0.0.0"
-	VersionDate = "0000-00-00 00:00:00.000 +00:00"
-)
-
 var (
-	reqDir = "./req"
-	// command line flags
+	Version = "0.0.0"
+	VersionDate = "0000-00-00 00:00:00"
+
+	reqDir string
+
 	configFilePtr = flag.String("config", "", "The configuration file to use")
-	reqDirPtr = flag.String("req", "", "The folder which contains the certificate requirements")
 	asServicePtr = flag.Bool("as-service", false, "Whether to start in service mode or not")
 	logFilePtr = flag.String("logfile", "certmaker-bot.log", "The log file to log to in service mode")
 )
 
 func main() {
+	fmt.Println("CertMaker Bot")
+	fmt.Printf("\tVersion %s\n", Version)
+	fmt.Printf("\tVersion Date %s\n\n", VersionDate)
+
+	flag.StringVar(&reqDir, "req", "./req", "The folder which contains the certificate requirements")
 	flag.Parse()
 	// open the log file
 	logHandle, err := os.OpenFile(*logFilePtr, os.O_APPEND | os.O_CREATE | os.O_WRONLY, 0700)
@@ -50,7 +53,7 @@ func main() {
 		baseLogger.SetFormatter(&log.JSONFormatter{})
 		baseLogger.SetOutput(io.MultiWriter(os.Stdout, logHandle))
 		baseLogger.SetLevel(log.InfoLevel)
-		duration = 1 * time.Hour
+		duration = 6 * time.Hour
 	} else {
 		baseLogger.SetFormatter(&log.TextFormatter{})
 		baseLogger.SetOutput(os.Stdout)
@@ -65,9 +68,7 @@ func main() {
 	if *configFilePtr != "" {
 		configuration.SetConfigurationFile(*configFilePtr)
 	}
-	if *reqDirPtr != "" {
-		reqDir = *reqDirPtr
-	}
+
 	_ = os.MkdirAll(reqDir, 0755)
 	conf, err := configuration.SetupConfiguration()
 	if err != nil {
@@ -103,9 +104,9 @@ func main() {
 				continue
 			}
 
-			err = certmaker.CheckIfDueForRenewal(cr, true)
-			if err != nil {
-				logger.Errorf("Could not determine renewal necessity for file '%s': %s", reqFile.Name(), err.Error())
+			due := certmaker.IsDueForRenewal(cr, true)
+			if !due {
+				logger.Errorf("no need to renew '%s'", reqFile.Name())
 				continue
 			}
 
@@ -113,6 +114,7 @@ func main() {
 			logger.Debugf("Cert '%s' is due for renewal, requesting...", cr.CertFile)
 			err = certmaker.RequestNewKeyAndCert(cr)
 			if err != nil {
+				certsToRenew--
 				logger.Errorf("could not request new key/cert: %s", err.Error())
 				continue
 			}
@@ -126,7 +128,7 @@ func main() {
 					if runtime.GOOS == "linux" {
 						cmd = exec.Command("bash", "-c", commandContent)
 					} else if runtime.GOOS == "windows" {
-						cmd = exec.Command("cmd", "/c", commandContent)
+						cmd = exec.Command("cmd", "/c", "start", commandContent)
 					} else if runtime.GOOS == "darwin" {
 						// TODO ?
 					}

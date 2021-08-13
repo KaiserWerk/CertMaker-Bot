@@ -25,7 +25,7 @@ const (
 	locationHeaderCertificate = "X-Certificate-Location"
 	locationHeaderPrivateKey = "X-Privatekey-Location"
 
-	minCertValidity = 3 // in days
+	minCertValidity = 3 * 24 // in days
 )
 
 func GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error) {
@@ -43,30 +43,30 @@ func GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error
 	return &cr, nil
 }
 
-func CheckIfDueForRenewal(cr *entity.CertificateRequirement, strict bool) error {
+func IsDueForRenewal(cr *entity.CertificateRequirement, strict bool) bool {
 	if !helper.FileExists(cr.KeyFile) || !helper.FileExists(cr.CertFile) {
-		return nil //fmt.Errorf("certificate or key file does not exist")
+		return true //fmt.Errorf("certificate or key file does not exist")
 	}
 
 	pairFiles, err := tls.LoadX509KeyPair(cr.CertFile, cr.KeyFile)
 	if err != nil {
-		return err
+		return true
 	}
 
 	cert, err := x509.ParseCertificate(pairFiles.Certificate[0])
 	if err != nil {
-		return err
+		return true
 	}
 
 	diff := cert.NotAfter.Sub(time.Now())
 
-	if diff.Hours() < 24 * minCertValidity {
-		return fmt.Errorf("certificate is invalid; remaining valididy of %f hours is below threshold of %d hours", diff.Hours(), 24 * minCertValidity)
+	if diff.Hours() < minCertValidity {
+		return true //fmt.Errorf("certificate is invalid; remaining valididy of %f hours is below threshold of %d hours", diff.Hours(), 24 * minCertValidity)
 	}
 
 	// TODO check OCSP responder
 
-	return nil
+	return false
 }
 
 func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
