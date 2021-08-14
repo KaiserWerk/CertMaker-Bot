@@ -1,6 +1,6 @@
 $sourcecode = "cmd/certmaker-bot/main.go"
 $target = "build/certmaker-bot"
-$version = "v1.0.1"
+$version = "v1.0.2"
 $date = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 # Windows, 64-bit
 $env:GOOS = 'windows'; $env:GOARCH = 'amd64';             go build -o "$($target)-windows-amd64-$($version).exe"  -ldflags "-s -w -X 'main.Version=$($version)' -X 'main.VersionDate=$($date)'" $sourcecode
