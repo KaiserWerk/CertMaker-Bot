@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 var configFile = "config.yaml"
@@ -32,6 +33,9 @@ func GetConfiguration() (*entity.Configuration, error) {
 
 func SetupConfiguration() (*entity.Configuration, error) {
 	if !helper.FileExists(configFile) {
+		configPath := filepath.Dir(configFile)
+		_ = os.MkdirAll(configPath, 0755)
+
 		configAssets := assets.GetConfigurationAssets()
 		cont, err := configAssets.ReadFile("config/config.dist.yaml")
 		if err != nil {

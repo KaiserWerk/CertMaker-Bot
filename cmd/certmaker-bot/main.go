@@ -25,8 +25,8 @@ var (
 	reqDir string
 
 	configFilePtr = flag.String("config", "", "The configuration file to use")
-	asServicePtr = flag.Bool("as-service", false, "Whether to start in service mode or not")
-	logFilePtr = flag.String("logfile", "certmaker-bot.log", "The log file to log to in service mode")
+	debugModePtr  = flag.Bool("debug", false, "Whether to start in debug mode or not")
+	logFilePtr    = flag.String("logfile", "certmaker-bot.log", "The log file to write to in normal mode")
 )
 
 func main() {
@@ -52,16 +52,16 @@ func main() {
 		duration time.Duration
 	)
 
-	if *asServicePtr {
-		baseLogger.SetFormatter(&log.JSONFormatter{})
-		baseLogger.SetOutput(io.MultiWriter(os.Stdout, logHandle))
-		baseLogger.SetLevel(log.InfoLevel)
-		duration = 6 * time.Hour
-	} else {
+	if *debugModePtr {
 		baseLogger.SetFormatter(&log.TextFormatter{})
 		baseLogger.SetOutput(os.Stdout)
 		baseLogger.SetLevel(log.TraceLevel)
 		duration = 15 * time.Second
+	} else {
+		baseLogger.SetFormatter(&log.JSONFormatter{})
+		baseLogger.SetOutput(io.MultiWriter(os.Stdout, logHandle))
+		baseLogger.SetLevel(log.InfoLevel)
+		duration = 6 * time.Hour
 	}
 	logger := baseLogger.WithFields(log.Fields{"application": "certmaker-bot", "version": Version})
 
@@ -83,7 +83,7 @@ func main() {
 	logger.Debug("Starting up...")
 
 	for {
-		logger.Debug(strings.Repeat("-", 20))
+		logger.Trace(strings.Repeat("-", 20))
 
 		// handle certificate requests
 		fi, err := ioutil.ReadDir(reqDir)

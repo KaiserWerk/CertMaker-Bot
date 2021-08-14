@@ -11,16 +11,23 @@ concerning API stability cannot be made.
 
 ### Example requirements file
 
+You should create a separate requirements file for every host you are trying to secure.
+Post commands can be whatever you like, but make they work on your operating system.
+Currently, post commands work on ``windows`` and ``linux``.
+Subject fields are optional, but can provide helpful additional information.
+The mimimum amount of days is 1, the maximum is 182 (half a year).
+
 ```yaml
 domains:
   - pihole
   - pihole.lan
 ips:
+  - 192.168.178.200
 subject:
   organization: My Homelab
   country: DE
   province: Some province
-  locality: Cologne
+  locality: Some city
   street_address:
   postal_code:
 days: 30
@@ -32,9 +39,12 @@ post_commands:
 
 ### As a linux service
 
+This is an example service unit file for ``systemd``, but ``sysvinit`` should be somewhat
+similar.
+
 ```plain
 [Unit]
-Description=CertMaker Bot
+Description=CertMaker Bot (to cover your certificate needs)
 After=network.target
 
 [Service]
@@ -50,16 +60,23 @@ RestartSec=15
 WantedBy=multi-user.target
 ```
 
+* Place the above service file into ``/etc/systemd/system/certmaker-bot.service``.
 * Create a local user, e.g. ``useradd -m -s /bin/bash certmaker-bot``
-* Place the above service file into /etc/systemd/system/certmaker-bot.service.
 * Place the binary in the home directory (`/home/certmaker-bot`) of the newly created user
-* Execute the commands ``sudo systemctl daemon-reload`` and ``sudo systemctl enable certmaker-bot.service``.
+* Execute the commands 
+  * ``sudo systemctl daemon-reload``
+  * ``sudo systemctl enable certmaker-bot.service``
+  * ``sudo systemctl start certmaker-bot.service``
+  
+  and you're ready to go.
 
 ## Usage
 
 
 
 ### Command Line Parameters
+
+#### Requirement files
 
 The default directory for the request files is ``./req``. You can change this directory with the startup 
 parameter ``--req``.
@@ -68,6 +85,8 @@ Example:
 ```bash
 ./certmaker-bot --req /some/other/dir
 ```
+
+#### Configuration file
 
 To configure the app, there needs to be a ``config.yaml`` file, by default besides the binary. If it 
 doesn't exist, it will be created at startup. If you want to use a different location, use the
@@ -78,17 +97,20 @@ Example:
 ./certmaker-bot --config /some/dir/config.yaml
 ```
 
-Usually, all output will be printed to Stdout. If you use the parameter ``--as-service``, the log output has
-less meta information, but will be written to the log file.
-Also, the debug interval to check and refresh certificates is 15 seconds; the ``--as-service`` 
-default is 6 hours.
+#### Debug mode
 
-__This logic will be inverted with the first stable release at the latest!__
+Usually, all output will be written to the log file. If you use the parameter 
+``--debug``, the log level will be `TRACE` instead of `INFO`, all output will be 
+written to standard output instead of the log file.
+Also, the debug interval to check and refresh certificates is 6 hours; the debug mode 
+default is 15 seconds (not to be used in production!).
 
 Example:
 ```bash
 ./certmaker-bot --as-service
 ```
+
+#### Log file location
 
 To change the location of the log file, use the ``--logfile`` parameter:
 
