@@ -9,13 +9,59 @@ concerning API stability cannot be made.
 
 ## Setup
 
+### Example requirements file
+
+```yaml
+domains:
+  - pihole
+  - pihole.lan
+ips:
+subject:
+  organization: My Homelab
+  country: DE
+  province: Some province
+  locality: Cologne
+  street_address:
+  postal_code:
+days: 30
+cert_file: /opt/app-certs/pihole/cert.pem
+key_file: /opt/app-certs/pihole/key.pem
+post_commands:
+  - cat /opt/app-certs/pihole/key.pem /opt/app-certs/pihole/cert.pem > /opt/app-certs/pihole/combined.pem
+```
+
 ### As a linux service
+
+```plain
+[Unit]
+Description=CertMaker Bot
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/certmaker-bot/certmaker --as-service --logfile /var/logs/certmaker-bot.log
+WorkingDirectory=/home/certmaker-bot
+User=certmaker-bot
+Group=certmaker-bot
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
+```
+
+* Create a local user, e.g. ``useradd -m -s /bin/bash certmaker-bot``
+* Place the above service file into /etc/systemd/system/certmaker-bot.service.
+* Place the binary in the home directory (`/home/certmaker-bot`) of the newly created user
+* Execute the commands ``sudo systemctl daemon-reload`` and ``sudo systemctl enable certmaker-bot.service``.
 
 ## Usage
 
+
+
 ### Command Line Parameters
 
-The default directory for these request files is ``./req``. You can change this directory with the startup 
+The default directory for the request files is ``./req``. You can change this directory with the startup 
 parameter ``--req``.
 
 Example:
@@ -35,13 +81,19 @@ Example:
 Usually, all output will be printed to Stdout. If you use the parameter ``--as-service``, the log output has
 less meta information, but will be written to the log file.
 Also, the debug interval to check and refresh certificates is 15 seconds; the ``--as-service`` 
-default is 1 hour.
+default is 6 hours.
 
-__This logic will be inverted with the first stable release!__
+__This logic will be inverted with the first stable release at the latest!__
 
 Example:
 ```bash
 ./certmaker-bot --as-service
+```
+
+To change the location of the log file, use the ``--logfile`` parameter:
+
+```bash
+./certmaker-bot --logfile /var/logs/certmaker-bot.log
 ```
 
 You can combine these parameters as required.
