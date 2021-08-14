@@ -36,6 +36,9 @@ func main() {
 
 	flag.StringVar(&reqDir, "req", "./req", "The folder which contains the certificate requirements")
 	flag.Parse()
+
+	_ = os.MkdirAll(reqDir, 0744)
+
 	// open the log file
 	logHandle, err := os.OpenFile(*logFilePtr, os.O_APPEND | os.O_CREATE | os.O_WRONLY, 0700)
 	if err != nil {
