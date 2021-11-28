@@ -24,10 +24,6 @@ func GetConfiguration() (*entity.Configuration, error) {
 
 	var c entity.Configuration
 	err = yaml.Unmarshal(cont, &c)
-	if err != nil {
-		return nil, err
-	}
-
 	return &c, err
 }
 
