@@ -49,7 +49,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/home/certmaker-bot/certmaker --as-service --logfile /var/logs/certmaker-bot.log
+ExecStart=/home/certmaker-bot/certmaker --logfile="/var/logs/certmaker-bot.log"
 WorkingDirectory=/home/certmaker-bot
 User=certmaker-bot
 Group=certmaker-bot
@@ -72,8 +72,6 @@ WantedBy=multi-user.target
 
 ## Usage
 
-
-
 ### Command Line Parameters
 
 #### Requirement files
@@ -83,18 +81,18 @@ parameter ``--req``.
 
 Example:
 ```bash
-./certmaker-bot --req /some/other/dir
+./certmaker-bot --req="/some/other/dir"
 ```
 
 #### Configuration file
 
-To configure the app, there needs to be a ``config.yaml`` file, by default besides the binary. If it 
+To configure the app, there needs to be a ``config.yaml`` file, by default directly besides the binary. If it 
 doesn't exist, it will be created at startup. If you want to use a different location, use the
 parameter ``--config``. A good default would usually be ``/etc/certmaker-bot/config.yaml``.
 
 Example:
 ```bash
-./certmaker-bot --config /some/dir/config.yaml
+./certmaker-bot --config="/some/dir/config.yaml"
 ```
 
 #### Debug mode
@@ -107,7 +105,7 @@ default is 15 seconds (not to be used in production!).
 
 Example:
 ```bash
-./certmaker-bot --as-service
+./certmaker-bot --debug
 ```
 
 #### Log file location
@@ -115,7 +113,7 @@ Example:
 To change the location of the log file, use the ``--logfile`` parameter:
 
 ```bash
-./certmaker-bot --logfile /var/logs/certmaker-bot.log
+./certmaker-bot --logfile="/var/logs/certmaker-bot.log"
 ```
 
 You can combine these parameters as required.
