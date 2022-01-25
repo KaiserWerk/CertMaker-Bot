@@ -1,3 +1,6 @@
+app:
+    min_validity: '72h'
+    interval: '6h'
 certmaker:
     host: "http://localhost:8880"
     tls_verify: false # only relevant with https
