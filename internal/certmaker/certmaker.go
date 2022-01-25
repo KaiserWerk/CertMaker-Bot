@@ -19,11 +19,11 @@ import (
 )
 
 const (
-	apiPrefix = "/api/v1"
+	apiPrefix    = "/api/v1"
 	routeRequest = apiPrefix + "/certificate/request"
 
 	locationHeaderCertificate = "X-Certificate-Location"
-	locationHeaderPrivateKey = "X-Privatekey-Location"
+	locationHeaderPrivateKey  = "X-Privatekey-Location"
 
 	minCertValidity = 3 * 24 // in days
 )
@@ -64,12 +64,14 @@ func IsDueForRenewal(cr *entity.CertificateRequirement, strict bool) bool {
 		return true //fmt.Errorf("certificate is invalid; remaining valididy of %f hours is below threshold of %d hours", diff.Hours(), 24 * minCertValidity)
 	}
 
-	// TODO check OCSP responder
+	if strict {
+		// TODO check OCSP responder
+	}
 
 	return false
 }
 
-func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
+func RequestNewKeyAndCert(rc *restclient.RestClient, cr *entity.CertificateRequirement) error {
 	jsonCont, err := json.Marshal(cr)
 	if err != nil {
 		return err
@@ -81,7 +83,7 @@ func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
 		return err
 	}
 
-	resp, err := restclient.ExecuteRequest(req)
+	resp, err := rc.ExecuteRequest(req)
 	if err != nil {
 		return err
 	}
@@ -98,7 +100,7 @@ func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
 	if err != nil {
 		return err
 	}
-	certReq, err := restclient.ExecuteRequest(req)
+	certReq, err := rc.ExecuteRequest(req)
 	if err != nil {
 		return err
 	}
@@ -121,7 +123,7 @@ func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
 	if err != nil {
 		return err
 	}
-	keyReq, err := restclient.ExecuteRequest(req)
+	keyReq, err := rc.ExecuteRequest(req)
 	if err != nil {
 		return err
 	}
@@ -142,4 +144,3 @@ func RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
 
 	return nil
 }
-
