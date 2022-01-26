@@ -9,12 +9,16 @@ import (
 	"github.com/KaiserWerk/CertMaker-Bot/internal/entity"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/helper"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/restclient"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 )
 
@@ -143,4 +147,76 @@ func RequestNewKeyAndCert(rc *restclient.RestClient, cr *entity.CertificateRequi
 	_ = dstWriter.Close()
 
 	return nil
+}
+
+func RenewCertificates(reqDir string, logger *logrus.Entry) (uint8, error) {
+	// handle certificate requests
+	fi, err := ioutil.ReadDir(reqDir)
+	if err != nil {
+		return 0, fmt.Errorf("could not read files from requirements directory: %s", err.Error())
+	}
+	logger.Tracef("Found %d files total", len(fi))
+	var certsToRenew uint8 = 0
+	for _, reqFile := range fi {
+		if !strings.HasSuffix(reqFile.Name(), ".yaml") {
+			logger.Infof("Ignoring file '%s'; not a yaml file", reqFile.Name())
+			continue
+		}
+		logger.Debugf("Found requirements file '%s'", reqFile.Name())
+		fileWithPath := filepath.Join(reqDir, reqFile.Name())
+		cr, err := GetRequirementsFromFile(fileWithPath)
+		if err != nil {
+			logger.Warningf("could not get requirements from file '%s': %s", fileWithPath, err.Error())
+			continue
+		}
+
+		due := IsDueForRenewal(cr, true)
+		if !due {
+			logger.Errorf("no need to renew '%s'", reqFile.Name())
+			continue
+		}
+
+		certsToRenew++
+		logger.Debugf("Cert '%s' is due for renewal, requesting...", cr.CertFile)
+		err = certmaker.RequestNewKeyAndCert(rc, cr)
+		if err != nil {
+			certsToRenew--
+			logger.Errorf("could not request new key/cert: %s", err.Error())
+			continue
+		}
+
+		logger.Printf("Cert '%s' successfully renewed!", cr.CertFile)
+		// execute optional commands after fetching new cert
+		if cr.PostCommands != nil && len(cr.PostCommands) > 0 {
+			logger.Debugf("Found %d post operation commands", len(cr.PostCommands))
+			for _, commandContent := range cr.PostCommands {
+				var cmd *exec.Cmd
+				if runtime.GOOS == "linux" {
+					cmd = exec.Command("bash", "-c", commandContent)
+				} else if runtime.GOOS == "windows" {
+					cmd = exec.Command("cmd", "/c", "start", commandContent)
+				} else if runtime.GOOS == "darwin" {
+					// TODO ?
+				}
+				logger.Debugf("Command to be executed: %s", cmd.String())
+				output, err := cmd.Output()
+				if err != nil {
+					logger.Warningf("could not execute command '%s': %s", cmd.String(), err.Error())
+					continue
+				}
+
+				if output != nil && len(output) > 0 {
+					logger.Debugf("command '%s' created output: %s", cmd.String(), string(output))
+				}
+			}
+		}
+	}
+
+	if certsToRenew > 1 {
+		logger.Infof("Renewed %d certificates", certsToRenew)
+	} else if certsToRenew == 1 {
+		logger.Info("Renewed 1 certificate")
+	} else {
+		logger.Info("No certificate renewed")
+	}
 }
