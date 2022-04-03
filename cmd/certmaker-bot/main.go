@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/KaiserWerk/CertMaker-Bot/internal/cert"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/configuration"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/logging"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/restclient"
@@ -57,8 +58,19 @@ func main() {
 	}
 
 	rc := restclient.New(cfg.CertMaker.Host, cfg.CertMaker.ApiKey, cfg.CertMaker.SkipVerify)
-
+	cm := cert.CertMaker{
+		Client: rc,
+	}
 	logger.Trace("Starting up...")
+
+	renewedCerts, errs := cm.RenewCertificates(*reqDir)
+	logger.Debugf("renewed %d certificates", renewedCerts)
+	if len(errs) > 0 {
+		logger.Error("got the following errors on reneweal")
+		for _, e := range errs {
+			logger.Error(e.Error()) // assuming no error is nil
+		}
+	}
 
 	t := time.NewTicker(cfg.App.Interval)
 
@@ -67,6 +79,14 @@ func main() {
 		case <-t.C:
 			logger.Trace(strings.Repeat("-", 20))
 
+			renewedCerts, errs = cm.RenewCertificates(*reqDir)
+			logger.Debugf("renewed %d certificates", renewedCerts)
+			if len(errs) > 0 {
+				logger.Error("got the following errors on reneweal")
+				for _, e := range errs {
+					logger.Error(e.Error()) // assuming no error is nil
+				}
+			}
 		}
 	}
 
