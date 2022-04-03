@@ -1,4 +1,4 @@
-package certmaker
+package cert
 
 import (
 	"bytes"
@@ -9,7 +9,6 @@ import (
 	"github.com/KaiserWerk/CertMaker-Bot/internal/entity"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/helper"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/restclient"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
@@ -32,7 +31,12 @@ const (
 	minCertValidity = 3 * 24 // in days
 )
 
-func GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error) {
+type CertMaker struct {
+	//Logger *logrus.Entry
+	Client *restclient.RestClient
+}
+
+func (cm *CertMaker) GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error) {
 	fileCont, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
@@ -47,7 +51,7 @@ func GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error
 	return &cr, nil
 }
 
-func IsDueForRenewal(cr *entity.CertificateRequirement, strict bool) bool {
+func (cm *CertMaker) IsDueForRenewal(cr *entity.CertificateRequirement, strict bool) bool {
 	if !helper.FileExists(cr.KeyFile) || !helper.FileExists(cr.CertFile) {
 		return true //fmt.Errorf("certificate or key file does not exist")
 	}
@@ -75,7 +79,7 @@ func IsDueForRenewal(cr *entity.CertificateRequirement, strict bool) bool {
 	return false
 }
 
-func RequestNewKeyAndCert(rc *restclient.RestClient, cr *entity.CertificateRequirement) error {
+func (cm *CertMaker) RequestNewKeyAndCert(cr *entity.CertificateRequirement) error {
 	jsonCont, err := json.Marshal(cr)
 	if err != nil {
 		return err
@@ -87,7 +91,7 @@ func RequestNewKeyAndCert(rc *restclient.RestClient, cr *entity.CertificateRequi
 		return err
 	}
 
-	resp, err := rc.ExecuteRequest(req)
+	resp, err := cm.Client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -104,7 +108,7 @@ func RequestNewKeyAndCert(rc *restclient.RestClient, cr *entity.CertificateRequi
 	if err != nil {
 		return err
 	}
-	certReq, err := rc.ExecuteRequest(req)
+	certReq, err := cm.Client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -127,7 +131,7 @@ func RequestNewKeyAndCert(rc *restclient.RestClient, cr *entity.CertificateRequi
 	if err != nil {
 		return err
 	}
-	keyReq, err := rc.ExecuteRequest(req)
+	keyReq, err := cm.Client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -149,46 +153,52 @@ func RequestNewKeyAndCert(rc *restclient.RestClient, cr *entity.CertificateRequi
 	return nil
 }
 
-func RenewCertificates(reqDir string, logger *logrus.Entry) (uint8, error) {
+func (cm *CertMaker) RenewCertificates(reqDir string) (uint8, []error) {
+	errs := make([]error, 0)
 	// handle certificate requests
 	fi, err := ioutil.ReadDir(reqDir)
 	if err != nil {
-		return 0, fmt.Errorf("could not read files from requirements directory: %s", err.Error())
+		//cm.Logger.WithField("error", err.Error()).Error("could not read files from requirements directory")
+		return 0, append(errs, fmt.Errorf("could not read files from requirements directory: %s", err.Error()))
 	}
-	logger.Tracef("Found %d files total", len(fi))
+	//cm.Logger.Tracef("Found %d files total", len(fi))
 	var certsToRenew uint8 = 0
 	for _, reqFile := range fi {
 		if !strings.HasSuffix(reqFile.Name(), ".yaml") {
-			logger.Infof("Ignoring file '%s'; not a yaml file", reqFile.Name())
+			//cm.Logger.Infof("Ignoring file '%s'; not a yaml file", reqFile.Name())
+			errs = append(errs, fmt.Errorf("ignoring file '%s'; not a yaml file", reqFile.Name()))
 			continue
 		}
-		logger.Debugf("Found requirements file '%s'", reqFile.Name())
+		//cm.Logger.Debugf("Found requirements file '%s'", reqFile.Name())
 		fileWithPath := filepath.Join(reqDir, reqFile.Name())
-		cr, err := GetRequirementsFromFile(fileWithPath)
+		cr, err := cm.GetRequirementsFromFile(fileWithPath)
 		if err != nil {
-			logger.Warningf("could not get requirements from file '%s': %s", fileWithPath, err.Error())
+			//cm.Logger.Warningf("could not get requirements from file '%s': %s", fileWithPath, err.Error())
+			errs = append(errs, fmt.Errorf("could not get requirements from file '%s': %s", fileWithPath, err.Error()))
 			continue
 		}
 
-		due := IsDueForRenewal(cr, true)
+		due := cm.IsDueForRenewal(cr, true)
 		if !due {
-			logger.Errorf("no need to renew '%s'", reqFile.Name())
+			//cm.Logger.Tracef("no need to renew '%s'", reqFile.Name())
+			errs = append(errs, fmt.Errorf("no need to renew '%s'", reqFile.Name()))
 			continue
 		}
 
 		certsToRenew++
-		logger.Debugf("Cert '%s' is due for renewal, requesting...", cr.CertFile)
-		err = certmaker.RequestNewKeyAndCert(rc, cr)
-		if err != nil {
+		//cm.Logger.Debugf("Cert '%s' is due for renewal, requesting...", cr.CertFile)
+
+		if err := cm.RequestNewKeyAndCert(cr); err != nil {
 			certsToRenew--
-			logger.Errorf("could not request new key/cert: %s", err.Error())
+			//cm.Logger.Errorf("could not request new key/cert: %s", err.Error())
+			errs = append(errs, fmt.Errorf("could not request new key/cert: %s", err.Error()))
 			continue
 		}
 
-		logger.Printf("Cert '%s' successfully renewed!", cr.CertFile)
+		//cm.Logger.Printf("Cert '%s' successfully renewed!", cr.CertFile)
 		// execute optional commands after fetching new cert
 		if cr.PostCommands != nil && len(cr.PostCommands) > 0 {
-			logger.Debugf("Found %d post operation commands", len(cr.PostCommands))
+			//cm.Logger.Debugf("Found %d post operation commands", len(cr.PostCommands))
 			for _, commandContent := range cr.PostCommands {
 				var cmd *exec.Cmd
 				if runtime.GOOS == "linux" {
@@ -198,25 +208,28 @@ func RenewCertificates(reqDir string, logger *logrus.Entry) (uint8, error) {
 				} else if runtime.GOOS == "darwin" {
 					// TODO ?
 				}
-				logger.Debugf("Command to be executed: %s", cmd.String())
-				output, err := cmd.Output()
+				//cm.Logger.Debugf("Command to be executed: %s", cmd.String())
+				_, err := cmd.Output()
 				if err != nil {
-					logger.Warningf("could not execute command '%s': %s", cmd.String(), err.Error())
+					//cm.Logger.Warningf("could not execute command '%s': %s", cmd.String(), err.Error())
+					errs = append(errs, fmt.Errorf("could not execute command '%s': %s", cmd.String(), err.Error()))
 					continue
 				}
 
-				if output != nil && len(output) > 0 {
-					logger.Debugf("command '%s' created output: %s", cmd.String(), string(output))
-				}
+				//if output != nil && len(output) > 0 {
+				//	cm.Logger.Debugf("command '%s' created output: %s", cmd.String(), string(output))
+				//}
 			}
 		}
 	}
 
-	if certsToRenew > 1 {
-		logger.Infof("Renewed %d certificates", certsToRenew)
-	} else if certsToRenew == 1 {
-		logger.Info("Renewed 1 certificate")
-	} else {
-		logger.Info("No certificate renewed")
-	}
+	//if certsToRenew > 1 {
+	//	cm.Logger.Infof("Renewed %d certificates", certsToRenew)
+	//} else if certsToRenew == 1 {
+	//	cm.Logger.Info("Renewed 1 certificate")
+	//} else {
+	//	cm.Logger.Info("No certificate renewed")
+	//}
+
+	return certsToRenew, errs
 }
