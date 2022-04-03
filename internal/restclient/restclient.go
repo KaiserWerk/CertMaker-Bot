@@ -29,7 +29,7 @@ func New(caHost, apiKey string, skipVerify bool) *RestClient {
 	}
 }
 
-func (rc *RestClient) ExecuteRequest(r *http.Request) (*http.Response, error) {
+func (rc *RestClient) Do(r *http.Request) (*http.Response, error) {
 	hostUrl, err := url.ParseRequestURI(rc.caHost)
 	if err != nil {
 		return nil, err
