@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/KaiserWerk/CertMaker-Bot/internal/cert"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/configuration"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/logging"
 	"github.com/KaiserWerk/CertMaker-Bot/internal/restclient"
-	"os"
-	"strings"
-	"time"
 )
 
 var (
@@ -73,16 +74,15 @@ func main() {
 	}
 
 	t := time.NewTicker(cfg.App.Interval)
-
 	for {
 		select {
 		case <-t.C:
 			logger.Trace(strings.Repeat("-", 20))
 
 			renewedCerts, errs = cm.RenewCertificates(*reqDir)
-			logger.Debugf("renewed %d certificates", renewedCerts)
+			logger.Debugf("renewed %d certificate(s)", renewedCerts)
 			if len(errs) > 0 {
-				logger.Error("got the following errors on reneweal")
+				logger.Error("got the following errors on renewal")
 				for _, e := range errs {
 					logger.Error(e.Error()) // assuming no error is nil
 				}

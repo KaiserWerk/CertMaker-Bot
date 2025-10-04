@@ -11,15 +11,14 @@ type RestClient struct {
 	client *http.Client
 	caHost string
 	apiKey string
-	config *tls.Config
 }
 
 func New(caHost, apiKey string, skipVerify bool) *RestClient {
 	return &RestClient{
 		client: &http.Client{
-			Timeout: 3 * time.Second,
+			Timeout: 10 * time.Second,
 			Transport: &http.Transport{TLSClientConfig: &tls.Config{
-				MinVersion:               tls.VersionTLS13,
+				MinVersion:               tls.VersionTLS12,
 				PreferServerCipherSuites: true,
 				InsecureSkipVerify:       skipVerify,
 			}},

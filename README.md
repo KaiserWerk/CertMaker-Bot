@@ -2,7 +2,7 @@
 
 A service app to automagically fetch fresh certificates from a *CertMaker* instance.
 In order to obtain certificates for an IP address, a DNS name or an email address, or
-multiple, for that matter, you need to create request files with the ``.yaml`` extension.
+multiple, for that matter, you need to create request requirements files with the ``.yaml`` extension.
 
 This project is a work in progress. That means there will be breaking changes and promises 
 concerning API stability cannot be made.
@@ -15,7 +15,7 @@ You should create a separate requirements file for every host you are trying to 
 Post commands can be whatever you like, but make they work on your operating system.
 Currently, post commands work on ``windows`` and ``linux``.
 Subject fields are optional, but can provide helpful additional information.
-The mimimum amount of days is 1, the maximum is 182 (half a year).
+The minimum amount of days is 1, the maximum is 182 (half a year).
 
 ```yaml
 domains:
@@ -70,13 +70,11 @@ WantedBy=multi-user.target
   
   and you're ready to go.
 
-## Usage
+## Command Line Parameters
 
-### Command Line Parameters
+### Requirement files
 
-#### Requirement files
-
-The default directory for the request files is ``./req``. You can change this directory with the startup 
+The default directory for the request files is ``./req``, relative to the working directory. You can change this directory with the startup 
 parameter ``--req``.
 
 Example:
@@ -84,7 +82,7 @@ Example:
 ./certmaker-bot --req="/some/other/dir"
 ```
 
-#### Configuration file
+### Configuration file
 
 To configure the app, there needs to be a ``config.yaml`` file, by default directly besides the binary. If it 
 doesn't exist, it will be created at startup. If you want to use a different location, use the
@@ -95,7 +93,7 @@ Example:
 ./certmaker-bot --config="/some/dir/config.yaml"
 ```
 
-#### Debug mode
+### Debug mode
 
 Usually, all output will be written to the log file. If you use the parameter 
 ``--debug``, the log level will be `TRACE` instead of `INFO`, all output will be 
@@ -108,7 +106,7 @@ Example:
 ./certmaker-bot --debug
 ```
 
-#### Log file location
+### Log file location
 
 To change the location of the log file, use the ``--logfile`` parameter:
 

@@ -1,9 +1,10 @@
 package logging
 
 import (
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
+
+	"github.com/sirupsen/logrus"
 )
 
 func New(file, initialContext string) (*logrus.Entry, func() error, error) {

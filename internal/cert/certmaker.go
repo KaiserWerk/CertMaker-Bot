@@ -6,12 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/KaiserWerk/CertMaker-Bot/internal/entity"
-	"github.com/KaiserWerk/CertMaker-Bot/internal/helper"
-	"github.com/KaiserWerk/CertMaker-Bot/internal/restclient"
-	"gopkg.in/yaml.v2"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -19,6 +14,12 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/KaiserWerk/CertMaker-Bot/internal/entity"
+	"github.com/KaiserWerk/CertMaker-Bot/internal/helper"
+	"github.com/KaiserWerk/CertMaker-Bot/internal/restclient"
+
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -37,7 +38,7 @@ type CertMaker struct {
 }
 
 func (cm *CertMaker) GetRequirementsFromFile(file string) (*entity.CertificateRequirement, error) {
-	fileCont, err := ioutil.ReadFile(file)
+	fileCont, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +67,7 @@ func (cm *CertMaker) IsDueForRenewal(cr *entity.CertificateRequirement, strict b
 		return true
 	}
 
-	diff := cert.NotAfter.Sub(time.Now())
+	diff := time.Until(cert.NotAfter)
 
 	if diff.Hours() < minCertValidity {
 		return true //fmt.Errorf("certificate is invalid; remaining valididy of %f hours is below threshold of %d hours", diff.Hours(), 24 * minCertValidity)
@@ -156,7 +157,7 @@ func (cm *CertMaker) RequestNewKeyAndCert(cr *entity.CertificateRequirement) err
 func (cm *CertMaker) RenewCertificates(reqDir string) (uint8, []error) {
 	errs := make([]error, 0)
 	// handle certificate requests
-	fi, err := ioutil.ReadDir(reqDir)
+	fi, err := os.ReadDir(reqDir)
 	if err != nil {
 		//cm.Logger.WithField("error", err.Error()).Error("could not read files from requirements directory")
 		return 0, append(errs, fmt.Errorf("could not read files from requirements directory: %s", err.Error()))
@@ -197,15 +198,16 @@ func (cm *CertMaker) RenewCertificates(reqDir string) (uint8, []error) {
 
 		//cm.Logger.Printf("Cert '%s' successfully renewed!", cr.CertFile)
 		// execute optional commands after fetching new cert
-		if cr.PostCommands != nil && len(cr.PostCommands) > 0 {
+		if len(cr.PostCommands) > 0 {
 			//cm.Logger.Debugf("Found %d post operation commands", len(cr.PostCommands))
 			for _, commandContent := range cr.PostCommands {
 				var cmd *exec.Cmd
-				if runtime.GOOS == "linux" {
+				switch runtime.GOOS {
+				case "linux":
 					cmd = exec.Command("bash", "-c", commandContent)
-				} else if runtime.GOOS == "windows" {
+				case "windows":
 					cmd = exec.Command("cmd", "/c", "start", commandContent)
-				} else if runtime.GOOS == "darwin" {
+				case "darwin":
 					// TODO ?
 				}
 				//cm.Logger.Debugf("Command to be executed: %s", cmd.String())
