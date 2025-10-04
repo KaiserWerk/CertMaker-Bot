@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/KaiserWerk/CertMaker-Bot/internal/cert"
@@ -27,6 +30,9 @@ func main() {
 	fmt.Println("CertMaker Bot")
 	fmt.Printf("\tVersion %s\n", Version)
 	fmt.Printf("\tVersion Date %s\n\n", VersionDate)
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 
 	if err := os.MkdirAll(*reqDir, 0700); err != nil {
 		fmt.Println("could not create requirements directory:", err.Error())
@@ -76,6 +82,9 @@ func main() {
 	t := time.NewTicker(cfg.App.Interval)
 	for {
 		select {
+		case <-ctx.Done():
+			logger.Info("shutting down...")
+			return
 		case <-t.C:
 			logger.Trace(strings.Repeat("-", 20))
 
