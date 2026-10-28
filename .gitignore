@@ -2,5 +2,6 @@
 req/
 build/
 
-config.yaml
-certmaker-bot.log
+**/*.yaml
+!internal/assets/config/config.dist.yaml
+**/*.log

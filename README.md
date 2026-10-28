@@ -12,8 +12,8 @@ concerning API stability cannot be made.
 ### Example requirements file
 
 You should create a separate requirements file for every host you are trying to secure.
-Post commands can be whatever you like, but make they work on your operating system.
-Currently, post commands work on ``windows`` and ``linux``.
+Post commands can be whatever you like, but make sure they work on your operating system.
+Currently, post commands work on `windows` and `linux`, probably on `darwin`.
 Subject fields are optional, but can provide helpful additional information.
 The minimum amount of days is 1, the maximum is 182 (half a year).
 
@@ -35,6 +35,12 @@ cert_file: /opt/app-certs/pihole/cert.pem
 key_file: /opt/app-certs/pihole/key.pem
 post_commands:
   - cat /opt/app-certs/pihole/key.pem /opt/app-certs/pihole/cert.pem > /opt/app-certs/pihole/combined.pem
+```
+
+### Using docker
+
+```powershell
+docker run kaiserwerk/certmaker-bot:latest
 ```
 
 ### As a linux service

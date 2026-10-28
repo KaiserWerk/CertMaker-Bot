@@ -31,13 +31,13 @@ func main() {
 	fmt.Printf("\tVersion %s\n", Version)
 	fmt.Printf("\tVersion Date %s\n\n", VersionDate)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	defer cancel()
 
-	if err := os.MkdirAll(*reqDir, 0700); err != nil {
-		fmt.Println("could not create requirements directory:", err.Error())
-		return
-	}
+	// if err := os.MkdirAll(*reqDir, 0700); err != nil {
+	// 	fmt.Println("could not create requirements directory:", err.Error())
+	// 	return
+	// }
 
 	logger, cleanup, err := logging.New(*logFile, "main")
 	if err != nil {
@@ -49,11 +49,6 @@ func main() {
 			fmt.Println("could not executed cleanup func:", err.Error())
 		}
 	}()
-
-	if err := os.MkdirAll(*reqDir, 0755); err != nil {
-		logger.WithField("error", err.Error()).Error("could not create requirements directory")
-		return
-	}
 
 	cfg, created, err := configuration.Setup(*configFile)
 	if err != nil {

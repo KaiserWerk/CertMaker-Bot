@@ -24,7 +24,7 @@ type (
 	CertMaker struct {
 		Host       string `yaml:"host"`
 		SkipVerify bool   `yaml:"skip_verify"`
-		ApiKey     string `yaml:"apikey"`
+		ApiKey     string `yaml:"api_key"`
 	}
 )
 
