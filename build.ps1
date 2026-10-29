@@ -1,6 +1,15 @@
+$version = git describe --tags --abbrev=0
+if ($LASTEXITCODE -ne 0) {
+    throw "Git-Tag konnte nicht ermittelt werden."
+}
+
+$version = $version.Trim()
+if (-not $version) {
+    throw "Git hat einen leeren Tag zurückgegeben."
+}
+
 $sourcecode = "cmd/certmaker-bot/main.go"
 $target = "build/certmaker-bot"
-$version = "v1.0.2"
 $date = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
 # Linux, 64-bit
