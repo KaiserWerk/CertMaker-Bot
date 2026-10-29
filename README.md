@@ -1,11 +1,9 @@
 # CertMaker Bot
 
 A service app to automagically fetch fresh certificates from a *CertMaker* instance.
-In order to obtain certificates for an IP address, a DNS name or an email address, or
-multiple, for that matter, you need to create request requirements files with the ``.yaml`` extension.
+In order to obtain certificates for an IP address or a DNS name, or
+multiple for that matter, you need to create requirements files with the ``.yaml`` extension.
 
-This project is a work in progress. That means there will be breaking changes and promises 
-concerning API stability cannot be made.
 
 ## Setup
 
@@ -39,14 +37,10 @@ post_commands:
 
 ### Using docker
 
+Use the provided docker-compose.yaml file as a starting point and run
+
 ```powershell
-docker run --rm `
-  -v ${PWD}\config:/config `
-  -v ${PWD}\req:/req `
-  -v ${PWD}\certs:/certs `
-  kaiserwerk/certmaker-bot:latest `
-  --config /config/config.yaml `
-  --req /req
+docker compose up -d
 ```
 
 ### As a linux service
@@ -101,7 +95,7 @@ If the file does not exist, the app uses built-in defaults:
 
 * ``app.min_validity: 72h``
 * ``app.interval: 6h``
-* ``certmaker.host: http://certmaker:8880``
+* ``certmaker.host: http://127.0.0.1:8880``
 * ``certmaker.skip_verify: false``
 * ``certmaker.api_key: ""``
 
@@ -109,19 +103,18 @@ Use ``--config`` to point to a custom file location.
 
 Example:
 ```bash
-./certmaker-bot --config="/some/dir/config.yaml"
+./certmaker-bot --config "/some/dir/config.yaml"
 ```
 
-### Debug mode
+### Logging
 
 Logs are always emitted as JSON. By default, logs are written to standard output.
 
-### Log file location
+#### Log file location
 
 To additionally write logs to a file, use the ``--logfile`` parameter:
 
 ```bash
-./certmaker-bot --logfile="/var/logs/certmaker-bot.log"
+./certmaker-bot --logfile "/var/logs/certmaker-bot.log"
 ```
 
-You can combine these parameters as required.
