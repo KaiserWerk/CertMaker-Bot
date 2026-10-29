@@ -32,7 +32,7 @@ func defaults() AppConfig {
 			Interval:    6 * time.Hour,
 		},
 		CertMaker: CertMaker{
-			Host:       "http://certmaker:8880",
+			Host:       "http://127.0.0.1:8880",
 			SkipVerify: false,
 			ApiKey:     "",
 		},
