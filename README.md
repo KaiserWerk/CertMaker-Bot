@@ -40,7 +40,13 @@ post_commands:
 ### Using docker
 
 ```powershell
-docker run kaiserwerk/certmaker-bot:latest
+docker run --rm `
+  -v ${PWD}\config:/config `
+  -v ${PWD}\req:/req `
+  -v ${PWD}\certs:/certs `
+  kaiserwerk/certmaker-bot:latest `
+  --config /config/config.yaml `
+  --req /req
 ```
 
 ### As a linux service
@@ -90,9 +96,16 @@ Example:
 
 ### Configuration file
 
-To configure the app, there needs to be a ``config.yaml`` file, by default directly besides the binary. If it 
-doesn't exist, it will be created at startup. If you want to use a different location, use the
-parameter ``--config``. A good default would usually be ``/etc/certmaker-bot/config.yaml``.
+By default, the app reads configuration from ``config.yaml``.
+If the file does not exist, the app uses built-in defaults:
+
+* ``app.min_validity: 72h``
+* ``app.interval: 6h``
+* ``certmaker.host: http://certmaker:8880``
+* ``certmaker.skip_verify: false``
+* ``certmaker.api_key: ""``
+
+Use ``--config`` to point to a custom file location.
 
 Example:
 ```bash
@@ -101,20 +114,11 @@ Example:
 
 ### Debug mode
 
-Usually, all output will be written to the log file. If you use the parameter 
-``--debug``, the log level will be `TRACE` instead of `INFO`, all output will be 
-written to standard output instead of the log file.
-Also, the debug interval to check and refresh certificates is 6 hours; the debug mode 
-default is 15 seconds (not to be used in production!).
-
-Example:
-```bash
-./certmaker-bot --debug
-```
+Logs are always emitted as JSON. By default, logs are written to standard output.
 
 ### Log file location
 
-To change the location of the log file, use the ``--logfile`` parameter:
+To additionally write logs to a file, use the ``--logfile`` parameter:
 
 ```bash
 ./certmaker-bot --logfile="/var/logs/certmaker-bot.log"

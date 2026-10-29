@@ -1,0 +1,12 @@
+services:
+  app:
+    container_name: certmaker-bot
+    image: kaiserwerk/certmaker-bot:latest
+    restart: unless-stopped
+    command: ["--config", "/config/config.yaml", "--req", "/req"]
+    volumes:
+      - ./docker/config:/config:ro
+      - ./docker/req:/req:ro
+      - ./docker/certs:/certs
+
+# no named volumes needed with bind mounts above

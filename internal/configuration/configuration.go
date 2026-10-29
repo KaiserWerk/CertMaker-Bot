@@ -1,12 +1,9 @@
 package configuration
 
 import (
+	"errors"
 	"os"
-	"path/filepath"
 	"time"
-
-	"github.com/KaiserWerk/CertMaker-Bot/internal/assets"
-	"github.com/KaiserWerk/CertMaker-Bot/internal/helper"
 
 	"gopkg.in/yaml.v2"
 )
@@ -28,31 +25,39 @@ type (
 	}
 )
 
-func Setup(file string) (*AppConfig, bool, error) {
-	var created bool
-	if !helper.FileExists(file) {
-		if err := os.MkdirAll(filepath.Dir(file), 0700); err != nil {
-			return nil, false, err
-		}
+func defaults() AppConfig {
+	return AppConfig{
+		App: App{
+			MinValidity: 72 * time.Hour,
+			Interval:    6 * time.Hour,
+		},
+		CertMaker: CertMaker{
+			Host:       "http://certmaker:8880",
+			SkipVerify: false,
+			ApiKey:     "",
+		},
+	}
+}
 
-		cont, err := assets.GetConfigAsset("config.dist.yaml")
-		if err != nil {
-			return nil, false, err
+func Setup(file string) (*AppConfig, error) {
+	c := defaults()
+	st, err := os.Stat(file)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return &c, nil
 		}
-
-		if err := os.WriteFile(file, cont, 0700); err != nil {
-			return nil, false, err
-		}
-		created = true
+		return nil, err
+	}
+	if st.IsDir() {
+		return nil, errors.New("configuration path points to a directory")
 	}
 
 	cont, err := os.ReadFile(file)
 	if err != nil {
-		return nil, created, err
+		return nil, err
 	}
 
-	var c AppConfig
 	err = yaml.Unmarshal(cont, &c)
 
-	return &c, created, err
+	return &c, err
 }

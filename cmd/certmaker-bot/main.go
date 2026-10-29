@@ -21,7 +21,7 @@ var (
 	VersionDate = "0000-00-00 00:00:00"
 
 	configFile = flag.String("config", "config.yaml", "The configuration file to use")
-	logFile    = flag.String("logfile", "certmaker-bot.log", "The log file to write to in normal mode")
+	logFile    = flag.String("logfile", "", "Optional log file path. If empty, logs are only written to stdout")
 	reqDir     = flag.String("req", "./req", "The folder which contains the certificate requirements")
 )
 
@@ -50,13 +50,10 @@ func main() {
 		}
 	}()
 
-	cfg, created, err := configuration.Setup(*configFile)
+	cfg, err := configuration.Setup(*configFile)
 	if err != nil {
 		logger.WithField("error", err.Error()).Error("could not set up configuration")
 		return
-	}
-	if created {
-		logger.Info("configuration file was created")
 	}
 
 	rc := restclient.New(cfg.CertMaker.Host, cfg.CertMaker.ApiKey, cfg.CertMaker.SkipVerify)

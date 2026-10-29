@@ -3,6 +3,6 @@ app:
     interval: 6h
 # details about the remote certmaker instance
 certmaker:
-    host: "http://localhost:8880"
-    tls_verify: true # only relevant with https. used to disable certificate verification
-    api_key: <your-key-here>
+    host: "http://certmaker:8880"
+    skip_verify: false # only relevant with https. used to disable certificate verification
+    api_key: ""
